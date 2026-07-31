@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DG TicTac - Ultimate Tic Tac Toe</title>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #edf2f7 50%, #e2e8f0 100%);
+            --surface-card: #ffffff;
+            --surface-hover: #f1f5f9;
+            --border-color: #e2e8f0;
+            --border-active: #0ea5e9;
+            --primary-color: #0284c7;
+            --secondary-color: #ec4899;
+            --accent-color: #8b5cf6;
+            --text-color: #0f172a;
+            --text-muted: #64748b;
+            --shadow-subtle: 0 20px 40px -15px rgba(15, 23, 42, 0.08);
+            --shadow-elevated: 0 25px 50px -12px rgba(15, 23, 42, 0.12);
+            --cell-bg: #f8fafc;
+            --cell-hover: #f1f5f9;
+        }
+
+        body.dark-theme {
+            --bg-gradient: linear-gradient(135deg, #030712 0%, #0f172a 50%, #1e1b4b 100%);
+            --surface-card: #1e293b;
+            --surface-hover: #334155;
+            --border-color: #334155;
+            --border-active: #38bdf8;
+            --primary-color: #38bdf8;
+            --secondary-color: #f472b6;
+            --accent-color: #a78bfa;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --shadow-subtle: 0 20px 40px -15px rgba(0, 0, 0, 0.4);
+            --shadow-elevated: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            --cell-bg: #0f172a;
+            --cell-hover: #1e293b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-color);
+            min-height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            padding: 16px;
+            transition: background 0.35s ease, color 0.35s ease;
+        }
+
+        /* Ambient Background Orbs */
+        .ambient-orb {
+            position: absolute;
+            width: 380px;
+            height: 380px;
+            border-radius: 50%;
+            filter: blur(90px);
+            z-index: -1;
+            opacity: 0.45;
+            animation: floatOrb 14s infinite alternate ease-in-out;
+        }
+        .orb-1 {
+            background: rgba(14, 165, 233, 0.25);
+            top: -80px;
+            left: -80px;
+        }
+        .orb-2 {
+            background: rgba(236, 72, 153, 0.2);
+            bottom: -80px;
+            right: -80px;
+            animation-delay: -7s;
+        }
+
+        @keyframes floatOrb {
+            0% { transform: translateY(0px) scale(1); }
+            100% { transform: translateY(25px) scale(1.12); }
+        }
+
+        /* Loader Screen */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: var(--surface-card);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+
+        #loader.fade-out {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loader-card {
+            background: var(--surface-card);
+            border: 1px solid var(--border-color);
+            padding: 32px 54px;
+            border-radius: 28px;
+            text-align: center;
+            box-shadow: var(--shadow-elevated);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .spinner {
+            width: 44px;
+            height: 44px;
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* App Container */
+        .app-container {
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+            margin-bottom: 24px;
+        }
+
+        /* Screens */
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Enhanced Home & Game Cards */
+        .clean-card {
+            background: var(--surface-card);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-elevated);
+            border-radius: 32px;
+            width: 100%;
+            padding: 28px;
+            text-align: center;
+            transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Gorgeous Home Header UI */
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(2, 132, 199, 0.08);
+            border: 1px solid rgba(2, 132, 199, 0.2);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        .logo-box {
+            width: 76px;
+            height: 76px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px auto;
+            box-shadow: 0 12px 25px rgba(2, 132, 199, 0.3);
+            overflow: hidden;
+        }
+
+        .logo-box img {
+            width: 44px;
+            height: 44px;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            margin-bottom: 4px;
+            color: var(--text-color);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+
+        /* Settings Container */
+        .settings-container {
+            background: var(--surface-hover);
+            border: 1px solid var(--border-color);
+            border-radius: 22px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .settings-group {
+            margin-bottom: 14px;
+        }
+
+        .settings-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .settings-label {
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .options-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .options-row.two-cols {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .option-pill {
+            background: var(--surface-card);
+            border: 1px solid var(--border-color);
+            padding: 10px 8px;
+            border-radius: 14px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-color);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+        }
+
+        .option-pill.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: #ffffff;
+            box-shadow: 0 6px 16px rgba(2, 132, 199, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .option-pill:hover:not(.active) {
+            background: var(--surface-card);
+            border-color: var(--border-active);
+        }
+
+        .menu-btn {
+            width: 100%;
+            padding: 16px;
+            margin-top: 10px;
+            border-radius: 18px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: #ffffff;
+            font-size: 0.98rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 8px 22px rgba(2, 132, 199, 0.28);
+            transition: all 0.2s ease;
+        }
+
+        .menu-btn.secondary {
+            background: var(--surface-card);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+
+        .menu-btn:active {
+            transform: scale(0.97);
+        }
+
+        .menu-btn:hover {
+            opacity: 0.95;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(2, 132, 199, 0.35);
+        }
+
+        .menu-btn.secondary:hover {
+            border-color: var(--primary-color);
+            background: var(--surface-hover);
+        }
+
+        .menu-btn i {
+            font-size: 1.15rem;
+        }
+
+        /* Fixed Bottom Center Watermark Credit */
+        .watermark-credit {
+            position: fixed;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+            z-index: 50;
+            pointer-events: none;
+            opacity: 0.7;
+            white-space: nowrap;
+        }
+
+        /* Game Header & Controls */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 14px;
+        }
+
+        .action-icon-btn {
+            background: var(--surface-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            width: 46px;
+            height: 46px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            transition: all 0.2s ease;
+        }
+
+        .action-icon-btn:active {
+            transform: scale(0.92);
+        }
+
+        .action-icon-btn:hover {
+            background: var(--surface-hover);
+            border-color: var(--primary-color);
+        }
+
+        /* Turn Indicator with Blinking Effect */
+        .turn-badge {
+            background: var(--surface-card);
+            border: 1px solid var(--border-active);
+            padding: 10px 22px;
+            border-radius: 30px;
+            font-size: 0.92rem;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 8px 20px rgba(2, 132, 199, 0.12);
+            color: var(--text-color);
+            transition: transform 0.2s ease;
+        }
+
+        @keyframes turnFlash {
+            0% { transform: scale(1); border-color: var(--border-active); box-shadow: 0 8px 20px rgba(2, 132, 199, 0.12); }
+            50% { transform: scale(1.06); border-color: var(--secondary-color); box-shadow: 0 0 25px rgba(236, 72, 153, 0.4); }
+            100% { transform: scale(1); border-color: var(--border-active); box-shadow: 0 8px 20px rgba(2, 132, 199, 0.12); }
+        }
+
+        .turn-badge.blink {
+            animation: turnFlash 0.4s ease;
+        }
+
+        .turn-badge .pulsing-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--primary-color);
+            animation: pulseDot 1.2s infinite alternate;
+        }
+
+        @keyframes pulseDot {
+            0% { transform: scale(0.8); opacity: 0.6; }
+            100% { transform: scale(1.25); opacity: 1; }
+        }
+
+        /* Scoreboard */
+        .scoreboard-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+            margin-bottom: 14px;
+        }
+
+        .score-card {
+            background: var(--surface-card);
+            border: 1px solid var(--border-color);
+            padding: 12px 6px;
+            border-radius: 18px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+
+        .score-card span {
+            display: block;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            margin-bottom: 4px;
+        }
+
+        .score-card strong {
+            font-size: 1.3rem;
+            font-weight: 900;
+        }
+
+        #score-x { color: var(--primary-color); }
+        #score-o { color: var(--secondary-color); }
+        #score-ties { color: #d97706; }
+
+        /* Game Board Grid */
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+            aspect-ratio: 1;
+            margin-bottom: 16px;
+        }
+
+        .cell {
+            background: var(--cell-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.6rem;
+            font-weight: 900;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+            user-select: none;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+            transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .cell:active {
+            transform: scale(0.92);
+        }
+
+        .cell:hover {
+            border-color: var(--primary-color);
+            background: var(--cell-hover);
+        }
+
+        .cell.x {
+            color: var(--primary-color);
+            text-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+            animation: scaleMark 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .cell.o {
+            color: var(--secondary-color);
+            text-shadow: 0 4px 12px rgba(236, 72, 153, 0.25);
+            animation: scaleMark 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes scaleMark {
+            0% { transform: scale(0.3); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Primary Action Button */
+        .primary-action-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            background: var(--surface-hover);
+            color: var(--text-color);
+            font-weight: 800;
+            font-size: 0.92rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+            transition: all 0.2s ease;
+        }
+
+        .primary-action-btn:active {
+            transform: scale(0.97);
+        }
+
+        .primary-action-btn:hover {
+            border-color: var(--primary-color);
+            background: var(--surface-card);
+        }
+
+        /* Modal Overlay Popup */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.25s ease;
+            padding: 16px;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-card {
+            background: var(--surface-card);
+            border: 1px solid var(--border-color);
+            padding: 32px 24px;
+            border-radius: 30px;
+            text-align: center;
+            width: 100%;
+            max-width: 340px;
+            box-shadow: var(--shadow-elevated);
+            transform: scale(0.85);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: scale(1);
+        }
+
+        /* Special Party Mode Styling for 10th Win */
+        .modal-card.party-mode {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.12), rgba(236, 72, 153, 0.12)), var(--surface-card);
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 50px rgba(236, 72, 153, 0.35), var(--shadow-elevated);
+            animation: partyBounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes partyBounce {
+            0% { transform: scale(0.7) rotate(-4deg); }
+            50% { transform: scale(1.06) rotate(2deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        .modal-icon-badge {
+            font-size: 3.2rem;
+            margin-bottom: 12px;
+            color: #f59e0b;
+            text-shadow: 0 4px 20px rgba(245, 158, 11, 0.35);
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-bottom: 6px;
+            color: var(--text-color);
+        }
+
+        .modal-desc {
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            margin-bottom: 24px;
+            font-weight: 500;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 16px;
+            font-weight: 800;
+            font-size: 0.92rem;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn:active {
+            transform: scale(0.95);
+        }
+
+        .modal-btn.accent {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: #ffffff;
+            border: none;
+            box-shadow: 0 8px 20px rgba(2, 132, 199, 0.3);
+        }
+
+        .modal-btn.subtle {
+            background: var(--surface-hover);
+            color: var(--text-color);
+        }
+
+        .modal-btn.subtle:hover {
+            border-color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Ambient Background Orbs -->
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+
+    <!-- Fixed Bottom Center Watermark Credit -->
+    <div class="watermark-credit">Created by Dhiraj Gupta</div>
+
+    <!-- Loading Screen -->
+    <div id="loader">
+        <div class="loader-card">
+            <div class="spinner"></div>
+            <h3 style="font-weight: 800; font-size: 1.05rem; color: var(--text-color); letter-spacing: 0.3px;">Loading DG TicTac...</h3>
+        </div>
+    </div>
+
+    <!-- App Container -->
+    <div class="app-container">
+
+        <!-- Home Menu Screen -->
+        <div id="menu-screen" class="screen active">
+            <div class="clean-card">
+                <div class="hero-badge">
+                    <i class="fa-solid fa-sparkles"></i> Next-Gen Arcade
+                </div>
+                <!-- PNG URL Icon -->
+                <div class="logo-box">
+                    <img src="https://cdn-icons-png.flaticon.com/512/566/566782.png" alt="DG TicTac Icon">
+                </div>
+                <h1>DG TicTac</h1>
+                <p class="subtitle">Ultimate Strategic Tic Tac Toe Experience</p>
+                
+                <!-- Settings Panel Container -->
+                <div class="settings-container">
+                    <!-- Theme Selector -->
+                    <div class="settings-group">
+                        <span class="settings-label"><i class="fa-solid fa-palette"></i> Color Theme</span>
+                        <div class="options-row two-cols">
+                            <div class="option-pill active" id="theme-light-btn" onclick="setTheme('light')">Vibrant Light</div>
+                            <div class="option-pill" id="theme-dark-btn" onclick="setTheme('dark')">Sleek Dark</div>
+                        </div>
+                    </div>
+
+                    <!-- Symbol Style Selector -->
+                    <div class="settings-group" style="margin-top: 14px;">
+                        <span class="settings-label"><i class="fa-solid fa-shapes"></i> Symbol Style</span>
+                        <div class="options-row">
+                            <div class="option-pill active" id="symbol-classic-btn" onclick="setSymbolStyle('classic')">X / O</div>
+                            <div class="option-pill" id="symbol-emoji-btn" onclick="setSymbolStyle('emoji')">🔥 / 💧</div>
+                            <div class="option-pill" id="symbol-scifi-btn" onclick="setSymbolStyle('scifi')">⚡ / 🛡️</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="menu-btn" onclick="startGame('friend')">
+                    <i class="fa-solid fa-user-group"></i> Play with Friend
+                </button>
+                <button class="menu-btn secondary" onclick="startGame('ai')">
+                    <i class="fa-solid fa-robot"></i> Play with AI (Smart)
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="game-header">
+                <button class="action-icon-btn" onclick="returnToMenu()" title="Back to Menu">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div class="turn-badge" id="turn-badge">
+                    <div class="pulsing-dot"></div>
+                    <span id="turn-text">Player X's Turn</span>
+                </div>
+                <!-- Speaker Icon Toggle Button for Sweet Background Music -->
+                <button class="action-icon-btn" id="sound-toggle-btn" onclick="toggleSound()" title="Toggle Sweet Background Music">
+                    <i class="fa-solid fa-volume-high" id="sound-icon"></i>
+                </button>
+            </div>
+
+            <!-- Scoreboard -->
+            <div class="scoreboard-grid">
+                <div class="score-card">
+                    <span id="label-p1">Player 1</span>
+                    <strong id="score-x">0</strong>
+                </div>
+                <div class="score-card">
+                    <span>Ties</span>
+                    <strong id="score-ties">0</strong>
+                </div>
+                <div class="score-card">
+                    <span id="label-p2">Player 2</span>
+                    <strong id="score-o">0</strong>
+                </div>
+            </div>
+
+            <div class="clean-card">
+                <div class="board-grid" id="board">
+                    <div class="cell" onclick="handleCellClick(0)"></div>
+                    <div class="cell" onclick="handleCellClick(1)"></div>
+                    <div class="cell" onclick="handleCellClick(2)"></div>
+                    <div class="cell" onclick="handleCellClick(3)"></div>
+                    <div class="cell" onclick="handleCellClick(4)"></div>
+                    <div class="cell" onclick="handleCellClick(5)"></div>
+                    <div class="cell" onclick="handleCellClick(6)"></div>
+                    <div class="cell" onclick="handleCellClick(7)"></div>
+                    <div class="cell" onclick="handleCellClick(8)"></div>
+                </div>
+                <button class="primary-action-btn" onclick="resetGame()">Reset Round</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Win Modal Popup -->
+    <div id="modal" class="modal-overlay">
+        <div class="modal-card" id="modal-card">
+            <div class="modal-icon-badge" id="modal-icon">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 class="modal-title" id="modal-title">Player 1 Wins!</h2>
+            <p class="modal-desc" id="modal-desc">Brilliant tactical victory!</p>
+            <div class="modal-actions">
+                <button class="modal-btn subtle" onclick="returnToMenu()">Menu</button>
+                <button class="modal-btn accent" onclick="closeModalAndReset()">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dismiss Loader
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loader = document.getElementById('loader');
+                loader.classList.add('fade-out');
+            }, 400);
+        });
+
+        // Settings State
+        let currentTheme = 'light';
+        let currentSymbolStyle = 'classic';
+        const symbols = {
+            classic: { x: 'X', o: 'O' },
+            emoji: { x: '🔥', o: '💧' },
+            scifi: { x: '⚡', o: '🛡️' }
+        };
+
+        function setTheme(theme) {
+            currentTheme = theme;
+            if (theme === 'dark') {
+                document.body.classList.add('dark-theme');
+                document.getElementById('theme-dark-btn').classList.add('active');
+                document.getElementById('theme-light-btn').classList.remove('active');
+            } else {
+                document.body.classList.remove('dark-theme');
+                document.getElementById('theme-light-btn').classList.add('active');
+                document.getElementById('theme-dark-btn').classList.remove('active');
+            }
+        }
+
+        function setSymbolStyle(style) {
+            currentSymbolStyle = style;
+            ['classic', 'emoji', 'scifi'].forEach(s => {
+                const btn = document.getElementById(`symbol-${s}-btn`);
+                if (s === style) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let gameMode = 'friend';
+        let scores = { x: 0, o: 0, ties: 0 };
+        
+        // Sweet Background Music setup using Web Audio API procedural ambient chords (No notification bar controls)
+        let soundEnabled = true;
+        let audioCtx = null;
+        let bgmInterval = null;
+
+        function startSweetBGM() {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                if (bgmInterval) clearInterval(bgmInterval);
+
+                // Gentle sweet pentatonic chord notes for a dreamy music-box feel
+                const sweetNotes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 880.00]; 
+
+                bgmInterval = setInterval(() => {
+                    if (!soundEnabled) return;
+                    try {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sine'; // Super clean, smooth, and sweet tone
+
+                        const note = sweetNotes[Math.floor(Math.random() * sweetNotes.length)];
+                        osc.frequency.setValueAtTime(note, audioCtx.currentTime);
+
+                        gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                        gain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.6);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 3.2);
+
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 3.2);
+                    } catch(e) {}
+                }, 1400);
+            } catch(e) {
+                console.log("BGM error:", e);
+            }
+        }
+
+        function stopBGM() {
+            if (bgmInterval) {
+                clearInterval(bgmInterval);
+                bgmInterval = null;
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            if (soundEnabled) {
+                icon.className = "fa-solid fa-volume-high";
+                startSweetBGM();
+            } else {
+                icon.className = "fa-solid fa-volume-xmark";
+                stopBGM();
+            }
+        }
+
+        function playMoveSound() {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(650, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1300, audioCtx.currentTime + 0.12);
+                
+                gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.12);
+            } catch(e) {}
+        }
+
+        function playWinSound() {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                    setTimeout(() => {
+                        if (!soundEnabled) return;
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                        
+                        gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.32);
+                        
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 0.32);
+                    }, i * 90);
+                });
+            } catch(e) {}
+        }
+
+        function triggerHaptic() {
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+
+        const winningCombinations = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        const menuScreen = document.getElementById('menu-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const turnText = document.getElementById('turn-text');
+        const turnBadge = document.getElementById('turn-badge');
+        const cells = document.querySelectorAll('.cell');
+        const modal = document.getElementById('modal');
+        const modalCard = document.getElementById('modal-card');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDesc = document.getElementById('modal-desc');
+        const modalIcon = document.getElementById('modal-icon');
+
+        const scoreXEl = document.getElementById('score-x');
+        const scoreOEl = document.getElementById('score-o');
+        const scoreTiesEl = document.getElementById('score-ties');
+        const labelP1 = document.getElementById('label-p1');
+        const labelP2 = document.getElementById('label-p2');
+
+        function startGame(mode) {
+            gameMode = mode;
+            menuScreen.classList.remove('active');
+            gameScreen.classList.add('active');
+
+            const activeSymbols = symbols[currentSymbolStyle];
+
+            if (mode === 'ai') {
+                labelP1.innerText = `You (${activeSymbols.x})`;
+                labelP2.innerText = `AI (${activeSymbols.o})`;
+            } else {
+                labelP1.innerText = `Player 1 (${activeSymbols.x})`;
+                labelP2.innerText = `Player 2 (${activeSymbols.o})`;
+            }
+
+            if (soundEnabled) {
+                startSweetBGM();
+            }
+
+            resetGame(true);
+        }
+
+        function returnToMenu() {
+            modal.classList.remove('active');
+            gameScreen.classList.remove('active');
+            menuScreen.classList.add('active');
+            scores = { x: 0, o: 0, ties: 0 };
+            updateScores();
+            stopBGM();
+        }
+
+        function handleCellClick(index) {
+            if (!gameActive || board[index] !== '') return;
+            if (gameMode === 'ai' && currentPlayer === 'O') return;
+
+            makeMove(index, currentPlayer);
+            playMoveSound();
+            triggerHaptic();
+
+            if (checkWin(currentPlayer)) {
+                endGame(false);
+            } else if (isBoardFull()) {
+                endGame(true);
+            } else {
+                switchPlayer();
+                if (gameMode === 'ai' && currentPlayer === 'O' && gameActive) {
+                    setTimeout(makeAIMove, 450);
+                }
+            }
+        }
+
+        function makeMove(index, player) {
+            board[index] = player;
+            const activeSymbols = symbols[currentSymbolStyle];
+            cells[index].innerText = player === 'X' ? activeSymbols.x : activeSymbols.o;
+            cells[index].classList.add(player.toLowerCase());
+        }
+
+        function switchPlayer() {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            const activeSymbols = symbols[currentSymbolStyle];
+            if (gameMode === 'ai') {
+                turnText.innerText = currentPlayer === 'X' ? `Your Turn (${activeSymbols.x})` : "AI Thinking...";
+            } else {
+                turnText.innerText = `Player ${currentPlayer === 'X' ? '1 (' + activeSymbols.x + ')' : '2 (' + activeSymbols.o + ')'}'s Turn`;
+            }
+
+            turnBadge.classList.remove('blink');
+            void turnBadge.offsetWidth;
+            turnBadge.classList.add('blink');
+        }
+
+        // Smart AI Logic
+        function makeAIMove() {
+            if (!gameActive) return;
+
+            let move = findBestWinningMove('O');
+            if (move === null) {
+                move = findBestWinningMove('X');
+            }
+            if (move === null && board[4] === '') {
+                move = 4;
+            }
+            if (move === null) { 
+                const emptyCells = [];
+                board.forEach((val, idx) => {
+                    if (val === '') emptyCells.push(idx);
+                });
+                if (emptyCells.length > 0) {
+                    move = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                }
+            }
+
+            if (move !== null && move !== undefined) {
+                makeMove(move, 'O');
+                playMoveSound();
+
+                if (checkWin('O')) {
+                    endGame(false);
+                } else if (isBoardFull()) {
+                    endGame(true);
+                } else {
+                    switchPlayer();
+                }
+            }
+        }
+
+        function findBestWinningMove(player) {
+            for (let comb of winningCombinations) {
+                let [a, b, c] = comb;
+                let line = [board[a], board[b], board[c]];
+                if (line.filter(val => val === player).length === 2 && line.includes('')) {
+                    if (board[a] === '') return a;
+                    if (board[b] === '') return b;
+                    if (board[c] === '') return c;
+                }
+            }
+            return null;
+        }
+
+        function checkWin(player) {
+            return winningCombinations.some(comb => {
+                return comb.every(index => board[index] === player);
+            });
+        }
+
+        function isBoardFull() {
+            return board.every(cell => cell !== '');
+        }
+
+        function endGame(isTie) {
+            gameActive = false;
+            const activeSymbols = symbols[currentSymbolStyle];
+            let isMatchOver = false;
+            let matchWinnerTitle = '';
+
+            modalCard.classList.remove('party-mode');
+
+            if (isTie) {
+                scores.ties++;
+                modalIcon.innerHTML = '<i class="fa-solid fa-handshake-angle" style="color: #0284c7;"></i>';
+                modalTitle.innerText = "It's a Tie!";
+                modalDesc.innerText = "A tightly contested deadlock.";
+            } else {
+                playWinSound();
+                if (currentPlayer === 'X') {
+                    scores.x++;
+                    if (scores.x >= 10) {
+                        isMatchOver = true;
+                        matchWinnerTitle = gameMode === 'ai' ? "You Won the Match!" : `Player 1 (${activeSymbols.x}) Won the Match!`;
+                    } else {
+                        modalIcon.innerHTML = '<i class="fa-solid fa-crown" style="color: #f59e0b;"></i>';
+                        modalTitle.innerText = gameMode === 'ai' ? "You Won!" : `Player 1 (${activeSymbols.x}) Wins!`;
+                        modalDesc.innerText = "Exceptional tactical victory!";
+                    }
+                } else {
+                    scores.o++;
+                    if (scores.o >= 10) {
+                        isMatchOver = true;
+                        matchWinnerTitle = gameMode === 'ai' ? "AI Won the Match!" : `Player 2 (${activeSymbols.o}) Won the Match!`;
+                    } else {
+                        modalIcon.innerHTML = '<i class="fa-solid fa-robot" style="color: #ec4899;"></i>';
+                        modalTitle.innerText = gameMode === 'ai' ? "AI Won!" : `Player 2 (${activeSymbols.o}) Wins!`;
+                        modalDesc.innerText = "Better luck next round.";
+                    }
+                }
+            }
+
+            if (isMatchOver) {
+                modalCard.classList.add('party-mode');
+                modalIcon.innerHTML = '🍾 🎉';
+                modalTitle.innerText = matchWinnerTitle;
+                modalDesc.innerText = "🎉 10 Wins Reached! Ultimate Match Champion! 🎉";
+                scores = { x: 0, o: 0, ties: 0 }; // Reset scores after match celebration
+            }
+
+            updateScores();
+            setTimeout(() => {
+                modal.classList.add('active');
+            }, 250);
+        }
+
+        function updateScores() {
+            scoreXEl.innerText = scores.x;
+            scoreOEl.innerText = scores.o;
+            scoreTiesEl.innerText = scores.ties;
+        }
+
+        function resetGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            gameActive = true;
+            currentPlayer = 'X';
+            const activeSymbols = symbols[currentSymbolStyle];
+            turnText.innerText = gameMode === 'ai' ? `Your Turn (${activeSymbols.x})` : `Player 1 (${activeSymbols.x})'s Turn`;
+            
+            cells.forEach(cell => {
+                cell.innerText = '';
+                cell.classList.remove('x', 'o');
+            });
+
+            modal.classList.remove('active');
+            modalCard.classList.remove('party-mode');
+        }
+
+        function closeModalAndReset() {
+            modal.classList.remove('active');
+            modalCard.classList.remove('party-mode');
+            resetGame();
+        }
+    </script>
+</body>
+</html>
